@@ -1,0 +1,10 @@
+.env
+secrets
+data
+backups
+*.zip
+__pycache__
+**/__pycache__
+*.pyc
+.venv
+qa-output

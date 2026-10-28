@@ -1,0 +1,82 @@
+name: clipforge-server
+x-app: &app
+  image: clipforge-server:20261015
+  build: .
+  platform: linux/amd64
+  init: true
+  env_file: .env
+  # ClipForge egress uses Proton DNS through the isolated VPN route.
+  dns: [10.2.0.1]
+  environment:
+    PRODUCTION_MODE: 'true'
+    AUTO_CREATE_SCHEMA: 'false'
+    EMBEDDED_WORKER: 'false'
+    DATABASE_URL: sqlite:////data/clipforge.db
+    MEDIA_ROOT: /data
+    PLAYWRIGHT_BROWSERS_PATH: /ms-playwright
+    BROWSER_EXECUTABLE_PATH: /usr/bin/google-chrome
+    FFMPEG_EXECUTABLE: ffmpeg
+    FFPROBE_EXECUTABLE: ffprobe
+    YOUTUBE_UPLOAD_HEADLESS: 'false'
+    APP_SECRET_FILE: /run/secrets/app_secret
+    ADMIN_PASSWORD_HASH_FILE: /run/secrets/admin_password_hash
+    YOUTUBE_API_KEY_FILE: /run/secrets/youtube_api_key
+    WORKER_JOB_TYPES: discovery,download,render,youtube_publish,tiktok_web_publish
+  secrets: [app_secret, admin_password_hash, youtube_api_key]
+  volumes: [media_data:/data]
+  read_only: true
+  tmpfs: [/tmp:size=512m, /home/clipforge:size=128m, /run:size=16m]
+  cap_drop: [ALL]
+  # SYS_CHROOT keeps the official seccomp chroot rule available to Chromium's
+  # nested user-namespace sandbox. Runtime UID 10001 drops all effective caps.
+  # KILL lets the root init forward shutdown to UID 10001. Application/browser
+  # effective capabilities remain zero after dropping privileges.
+  cap_add: [CHOWN, SETUID, SETGID, DAC_OVERRIDE, SYS_CHROOT, KILL]
+  security_opt:
+    - no-new-privileges:true
+    - seccomp=./vendor/seccomp_profile.json
+  shm_size: 1gb
+  logging:
+    driver: json-file
+    options: {max-size: 10m, max-file: '3'}
+
+services:
+  migrate:
+    <<: *app
+    command: [migrate]
+    restart: 'no'
+  web:
+    <<: *app
+    command: [web]
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+    ports: ['127.0.0.1:8001:8000']
+    restart: unless-stopped
+    stop_grace_period: 60s
+    healthcheck:
+      test: [CMD, python, -m, deploy.health, web]
+      interval: 30s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
+  worker:
+    <<: *app
+    command: [worker]
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+    restart: unless-stopped
+    stop_grace_period: 15m
+    healthcheck:
+      test: [CMD, python, -m, deploy.health, worker]
+      interval: 30s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
+
+volumes:
+  media_data:
+
+secrets:
+  app_secret: {file: ./secrets/app_secret}
+  admin_password_hash: {file: ./secrets/admin_password_hash}
+  youtube_api_key: {file: ./secrets/youtube_api_key}

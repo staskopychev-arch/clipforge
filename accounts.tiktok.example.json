@@ -1,0 +1,11 @@
+{
+  "accounts": [
+    {
+      "platform": "tiktok_web",
+      "display_name": "My TikTok channel",
+      "cookies": [
+        {"name": "sessionid", "value": "EXAMPLE_NOT_AUTHENTICATED_REPLACE_WITH_YOUR_EXPORT", "domain": ".tiktok.com", "path": "/", "secure": true, "httpOnly": true, "sameSite": "Lax"}
+      ]
+    }
+  ]
+}
