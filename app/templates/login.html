@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Вход · ClipForge</title>
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+  <link rel="stylesheet" href="/static/app.css?v=20261005-1">
+</head>
+<body class="login-page">
+  <main class="login-shell">
+    <section class="login-card">
+      <div class="brand"><span class="brand-mark">CF</span><span>ClipForge</span></div>
+      <div><span class="eyebrow">Панель управления</span><h1>Вход в сервис</h1></div>
+      {% if error %}<p class="login-error">{{ error }}</p>{% endif %}
+      {% if not configured %}<p class="login-error">В `.env` не задан ADMIN_PASSWORD_HASH.</p>{% endif %}
+      <form action="/login" method="post">
+        <label>Логин<input name="username" autocomplete="username" required autofocus></label>
+        <label>Пароль<input name="password" type="password" autocomplete="current-password" required></label>
+        <button class="button primary" type="submit" {% if not configured %}disabled{% endif %}>Войти</button>
+      </form>
+    </section>
+  </main>
+</body>
+</html>

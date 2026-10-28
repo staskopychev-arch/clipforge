@@ -1,0 +1,341 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ClipForge</title>
+  <meta name="description" content="Поиск, монтаж и публикация видео в TikTok и YouTube">
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+  <link rel="stylesheet" href="/static/app.css?v=20261027-45">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="brand-mark">CF</span><span>ClipForge</span></div>
+    <div class="top-actions">
+      <span id="systemStatus" class="status-pill">Подключение…</span>
+      <!-- Пользовательская кнопка быстрой загрузки видео в ClipForge -->
+      <div class="video-upload-container">
+        <input type="file" id="videoFileInput" accept="video/mp4,video/quicktime,video/webm,.mkv" hidden>
+        <button id="uploadVideoBtn" class="button secondary" type="button">Загрузить видео</button>
+        <span id="uploadStatus" class="helper" aria-live="polite"></span>
+      </div>
+      <form action="/logout" method="post" class="logout-form"><button class="text-button" type="submit">Выйти</button></form>
+    </div>
+  </header>
+
+  <main>
+    <section class="summary" aria-label="Сводка">
+      <article><span>Источники</span><strong id="sourceCount">0</strong></article>
+      <article><span>Готовые клипы</span><strong id="clipCount">0</strong></article>
+      <article><span>Аккаунты</span><strong id="accountCount">0</strong></article>
+      <article><span>В очереди</span><strong id="queueCount">0</strong></article>
+    </section>
+
+    <nav class="panel-link-nav" aria-label="Разделы управления">
+      <a id="viewsTab" href="#viewsPanel" aria-controls="viewsPanel" aria-expanded="false">Просмотры · каждый час</a>
+      <a href="#editingPanel">Монтаж</a>
+      <a href="#accountImportPanel">Импорт cookie</a>
+      <a href="#loginQueuePanel">Вход в Google</a>
+      <a href="#youtubeUploadPanel">YouTube · через сайт</a>
+      <a href="#automationPanel">TikTok · режим 24/7</a>
+      <a href="#fiveVideoPanel">TikTok · 5 видео</a>
+    </nav>
+
+    <section id="viewsPanel" class="panel wide" hidden>
+      <div class="panel-heading"><div><span class="eyebrow">TikTok · статистика</span><h2>Просмотры по аккаунтам</h2></div>
+        <button id="viewsRefresh" class="button secondary" type="button">Обновить сейчас</button></div>
+      <p class="helper">Проверка на сервере раз в час, даже когда страница закрыта. Сумма просмотров всех доступных роликов в TikTok Studio. Новые аккаунты добавляются автоматически. Время указано по Москве.</p>
+      <div class="views-summary" aria-label="Сводка просмотров">
+        <article><span>Аккаунтов TikTok</span><strong id="viewsAccounts">—</strong></article>
+        <article><span>Есть результаты</span><strong id="viewsChecked">—</strong></article>
+        <article><span>Просмотры учтённых роликов</span><strong id="viewsTotal">—</strong></article>
+      </div>
+      <p id="viewsStatus" class="helper" role="status" aria-live="polite">Ожидание первой проверки…</p>
+      <label class="views-filter">Найти аккаунт<input id="viewsFilter" type="search" placeholder="Название или @профиль" autocomplete="off"></label>
+      <div class="views-table-wrap"><table class="views-table"><thead><tr><th>Аккаунт</th><th>Просмотры</th><th>Роликов</th><th>Изменение</th><th>Проверено · МСК</th><th>Следующая проверка · МСК</th><th>Состояние</th></tr></thead><tbody id="viewsRows"><tr><td colspan="7">Загрузка…</td></tr></tbody></table></div>
+      <p class="helper">Изменение — с предыдущего успешного замера. Удаление роликов может уменьшить сумму. «Не все ролики» означает неполную проверку; при ошибке остаётся последний успешный результат. Отсутствие данных обозначается «—», а не нулём.</p>
+      <p id="viewsError" class="error-text" role="alert"></p>
+    </section>
+
+    <section id="editingPanel" class="panel wide">
+      <div class="panel-heading"><div><span class="eyebrow">Монтаж</span><h2>Автоматический монтаж</h2></div></div>
+      <p class="helper">Вертикальный кадр 9:16, полный исходный кадр на размытом фоне и остальные настройки сохраняются. Эти параметры применяются к новым заданиям во всех режимах, включая «5 видео».</p>
+      <form id="editingForm" class="discovery-grid">
+        <label class="check query-field"><input id="editAutomatic" type="checkbox"><span>Автоматически подбирать монтаж для каждого ролика</span></label>
+        <p id="editAutomaticSummary" class="helper query-field" hidden>Всё подбирается автоматически: 1080×1920 (9:16), фрагмент 10–15 секунд, скорость 0,95–1,05× без 1× (изменение на 1–5%), зум 1–3%, мягкая цветокоррекция, размытый фон, рамка и лёгкое зерно. В начале появляется заголовок исходника. Зеркало — только если проверка кадров не обнаружила текст; проверка может пропустить короткие надписи. С начала и конца исходника исключаются 1–2 секунды, если хватает длины. Доступная музыка выбирается автоматически, иначе обрабатывается исходный звук: громкость, лёгкая смена тональности, тихий шум и плавные края. Звуки TikTok не добавляются. Ролик пересобирается без исходных метаданных. Готовые клипы не меняются.</p>
+        <div id="manualEditingFields" class="editing-manual-fields">
+        <label>Начало фрагмента, сек.<input id="editStart" type="number" min="0" max="86400" step="0.1" value="0" required></label>
+        <label>Конец фрагмента, сек.<input id="editEnd" type="number" min="0.1" max="86400" step="0.1" placeholder="Необязательно"></label>
+        <label>Скорость<select id="editSpeed"><option value="0.5">0,5×</option><option value="0.75">0,75×</option><option value="1" selected>1× · обычная</option><option value="1.25">1,25×</option><option value="1.5">1,5×</option><option value="2">2×</option></select></label>
+        <label>Качество<select id="editQuality"><option value="1080p">1080p · высокое</option><option value="720p">720p · среднее</option><option value="480p">480p · меньший файл</option></select></label>
+        <p class="helper query-field">В ручном режиме сохраняется исходный звук. Начало и конец задаются по исходному видео; длина клипа в выбранном режиме ограничивает итог после изменения скорости.</p>
+        </div>
+        <button id="editSave" class="button secondary" type="submit">Сохранить монтаж</button>
+        <span id="editStatus" class="helper" role="status" aria-live="polite">Загружаем настройки…</span>
+      </form>
+      <p id="editError" class="error-text" role="alert"></p>
+    </section>
+
+    <section id="accountImportPanel" class="panel wide">
+      <form id="accountImportForm" class="account-import">
+        <div>
+          <strong>Добавить аккаунты из JSON</strong>
+          <span>Cookie YouTube или TikTok будут определены по доменам и сохранены в зашифрованном виде. Используйте только свои аккаунты.</span>
+        </div>
+        <input id="accountJson" type="file" accept="application/json,.json" required>
+        <button class="button secondary" type="submit">Загрузить аккаунты из JSON</button>
+      </form>
+      <button class="button accent" type="button" data-paste-tiktok-cookies>Вставить cookie TikTok</button>
+      <p class="cookie-paste-hint">Вставьте текст из браузера — ClipForge сам создаст JSON и сохранит аккаунт.</p>
+    </section>
+
+    <section id="loginQueuePanel" class="panel wide login-queue-panel">
+      <div class="panel-heading">
+        <div><span class="eyebrow">Вход без готовых cookie</span><h2>Очередь входа в свои YouTube-аккаунты</h2></div>
+        <span id="loginQueueStatus" class="helper" role="status">Остановлена</span>
+      </div>
+      <p class="helper">Импорт не запускает вход автоматически. До 50 записей, один браузер и одна попытка на аккаунт. При CAPTCHA или подтверждении очередь ждёт вас до 15 минут; при ошибке останавливается, а не перебирает следующие аккаунты.</p>
+      <form id="loginCredentialsForm">
+        <label>JSON или CSV с полями login,password и необязательным display_name<input id="loginCredentialsFile" type="file" accept=".json,.csv,application/json,text/csv" required></label>
+        <details><summary>Показать пример формата (только вымышленные данные)</summary><pre>[
+  {"login":"owner@example.com","password":"YOUR_PASSWORD","display_name":"Мой канал 1"},
+  {"login":"owner2@example.com","password":"YOUR_PASSWORD","display_name":"Мой канал 2"}
+]</pre><p>CSV: первая строка <code>login,password,display_name</code>, далее — по одному аккаунту в строке. UTF-8, запятая как разделитель. Не отправляйте файл в чат.</p></details>
+        <label class="check"><input id="loginOwnsAccounts" type="checkbox" required><span>Это мои аккаунты; я разрешаю вход и готов вручную выполнять проверки Google.</span></label>
+        <p class="helper">Пароли шифруются в базе и очищаются после завершения, ошибки или отмены входа. Ожидающие записи можно удалить кнопкой ниже. Доступ к панели открывает и окно проверки — не передавайте его посторонним.</p>
+        <button class="button secondary" type="submit">Импортировать логины и пароли</button>
+      </form>
+      <div class="login-queue-actions">
+        <button id="loginQueueStart" class="button primary" type="button">Запустить очередь входа</button>
+        <button id="loginQueueStop" class="button secondary" type="button">Остановить и закрыть текущий вход</button>
+        <button id="loginQueueClear" class="text-button" type="button">Удалить ожидающие пароли</button>
+      </div>
+      <p id="loginQueueMessage" class="helper" role="status"></p>
+      <div id="loginManualPanel" hidden>
+        <h3>Ручная проверка в серверном браузере Google / YouTube</h3>
+        <p>Нажимайте на элементы изображения. Для ввода нажмите нужное поле, затем отправьте текст ниже. Здесь не используется автоматическое решение CAPTCHA. После проверки нажмите «Проверить и продолжить».</p>
+        <img id="loginBrowserScreen" alt="Окно серверного браузера для ручного подтверждения входа" width="1100" height="760" tabindex="0">
+        <form id="loginManualTextForm"><label>Текст для выбранного поля<input id="loginManualText" type="password" autocomplete="off" maxlength="500"></label><button class="button secondary" type="submit">Ввести текст</button></form>
+        <div class="login-queue-actions">
+          <button class="button secondary" data-login-key="Tab" type="button">Tab</button>
+          <button class="button secondary" data-login-key="Enter" type="button">Enter</button>
+          <button class="button secondary" data-login-key="Backspace" type="button">Стереть символ</button>
+          <button class="button secondary" data-login-key="Control+A" type="button">Выделить текст</button>
+          <button class="button secondary" data-login-scroll="-500" type="button">Прокрутить вверх</button>
+          <button class="button secondary" data-login-scroll="500" type="button">Прокрутить вниз</button>
+          <button id="loginManualResume" class="button primary" type="button">Проверить и продолжить</button>
+        </div>
+      </div>
+      <div class="table-wrap"><table><thead><tr><th>Аккаунт</th><th>Статус</th><th>Результат</th></tr></thead><tbody id="loginQueueRows"><tr><td colspan="3">Записей пока нет</td></tr></tbody></table></div>
+    </section>
+
+    <div class="workspace">
+      <section id="automationPanel" class="panel wide automation-panel">
+        <div class="panel-heading">
+          <div><span id="automationPlatformLabel" class="eyebrow">TikTok · публикации по расписанию</span><h2 id="automationTitle">TikTok · режим 24/7</h2></div>
+          <span id="automationStatus" class="helper" role="status">Остановлен</span>
+        </div>
+        <p class="helper">Один новый ролик за цикл; максимум один клип с исходника. В TikTok аккаунты чередуются по кругу; повторные файлы и одинаковые фрагменты не отправляются. Вкладку можно закрыть. Выбирается наиболее подходящий запросу ролик из первых 20 результатов по названию и описанию. Первый результат тоже участвует. Использованные и исключённые исходники пропускаются. После трёх неудачных скачиваний адрес временно пропускается при новом поиске на 30 минут. Обычный сбой скачивания повторяет тот же адрес через 60 секунд.</p>
+        <p id="searchRightsMode" class="helper">Поиск: <strong>Есть разрешение автора</strong>. Фильтр Creative Commons отключён. Используйте исходники, на которые у вас есть разрешение.</p>
+        <form id="automationForm" class="discovery-grid">
+          <label>Платформа<select id="automationPlatform"><option value="tiktok_web">TikTok</option><option value="youtube">YouTube</option></select></label>
+          <label>Отбор<select id="automationTopic"><option value="any">Лучший из первых 20 результатов</option></select></label>
+          <label class="query-field">Поисковые запросы, по одному на строку<textarea id="automationQueries" rows="3" required placeholder="Например: домашняя выпечка"></textarea></label>
+          <label>Режим<select id="automationMode"><option value="preview">Только поиск и монтаж</option><option value="publish">С публикацией через сайт</option></select></label>
+          <label>Интервал, минут<input id="automationInterval" type="number" min="1" value="360" required></label>
+          <label>Лимит за 24 ч. · 0 = без лимита<input id="automationDailyLimit" type="number" min="0" value="0" required></label>
+          <label>Клипов с исходника<input id="automationClipCount" type="number" min="1" max="1" value="1" readonly required></label>
+          <label>Длина клипа, сек.<input id="automationDuration" type="number" min="5" max="60" value="20" required></label>
+          <label>Видимость<select id="automationVisibility"><option value="private">Только я</option><option value="unlisted">По ссылке</option><option value="public">Публично</option></select></label>
+          <label class="query-field">Порядок аккаунтов (Ctrl — выбрать несколько)<select id="automationAccounts" multiple size="3"></select></label>
+          <p id="automationAccountsHint" class="automation-account-hint"></p>
+          <label class="check pipeline-consent"><input id="automationConsent" type="checkbox"><span>Управляю выбранными аккаунтами и разрешаю публикации по расписанию. Один клип за цикл, без повторов; лимит выше — моя настройка.</span></label>
+          <button id="automationStart" class="button primary" type="submit">Запустить 24/7</button>
+        </form>
+        <div class="automation-actions">
+          <button id="automationContentOpen" class="button secondary" type="button">Настроить описание и хештеги</button>
+          <button class="button secondary" type="button" data-paste-tiktok-cookies>Вставить cookie TikTok</button>
+          <button id="automationStop" class="button secondary" type="button">Остановить 24/7</button>
+        </div>
+        <section id="fiveVideoPanel" class="five-video-panel" aria-labelledby="fiveVideoTitle">
+          <div class="panel-heading"><div><span class="eyebrow">TikTok · ограниченная партия</span><h2 id="fiveVideoTitle">5 видео на каждый аккаунт</h2></div><strong id="fiveTarget">0 публикаций</strong></div>
+          <p>Пять разных роликов, пять описаний. Сначала видео 1 отправляется во все выбранные аккаунты, затем видео 2 и так до видео 5. Один и тот же набор используется на всех аккаунтах; после пятого круга очередь останавливается.</p>
+          <p class="helper">Заполните описания и сохраните их. Сохранение не запускает публикации. В каждом описании можно указать свои хештеги. Для роликов используются поисковые запросы, длительность, интервал и видимость из настроек выше.</p>
+          <section id="fiveReview" class="five-clip-review" hidden aria-labelledby="fiveReviewTitle">
+            <h3 id="fiveReviewTitle">Проверьте сам фрагмент перед отправкой</h3>
+            <p class="helper">Посмотрите всё видео: нужное содержание должно быть в кадре. Название и описание источника этого не гарантируют. Каждый новый ролик ждёт подтверждения перед первой отправкой.</p>
+            <video id="fiveReviewVideo" controls playsinline preload="metadata"></video>
+            <p id="fiveReviewSource" class="helper"></p>
+            <p id="fiveReviewStatus" role="status"></p>
+            <label class="check"><input id="fiveReviewWatched" type="checkbox"><span>Просмотрел этот фрагмент: в кадре нужное содержание.</span></label>
+            <div class="automation-actions">
+              <button id="fiveReviewApprove" type="button" class="button primary">Подтвердить фрагмент</button>
+              <button id="fiveReviewReject" type="button" class="button secondary">Не подходит — исключить исходник</button>
+            </div>
+          </section>
+          <form id="fiveVideoForm">
+            <details class="five-account-picker"><summary>Аккаунты партии · выбрать до 30</summary><div id="fiveAccounts" class="five-account-grid"></div></details>
+            <p class="helper">Когда 24/7 остановлен, можно выбрать другие аккаунты и сохранить их для следующего запуска. Сохранение не запускает публикации.</p>
+            <div id="fiveVideoCards" class="five-video-grid"></div>
+            <div class="automation-actions"><button id="fiveSave" class="button primary" type="submit">Сохранить описания и поиск</button><span id="fiveSaveState" class="helper" role="status"></span></div>
+          </form>
+          <div class="five-batch-start">
+            <label class="check"><input id="fiveConsent" type="checkbox"><span>Разрешаю отправить эти пять роликов в каждый выбранный аккаунт.</span></label>
+            <button id="fiveStart" class="button secondary" type="button" aria-describedby="fiveStartHint" disabled>Запустить партию из 5 видео</button>
+            <p id="fiveStartHint" class="helper" role="status" aria-live="polite">Загружаем настройки партии…</p>
+            <p id="fiveError" class="error-text" role="alert"></p>
+            <p id="fiveBatchStatus" class="helper" role="status">Черновик · публикации не запущены</p>
+            <p class="helper">Остановить партию можно кнопкой «Остановить 24/7» выше. Созданные ссылки учитываются по подтверждённым публикациям; публичность отмечается в журнале отдельно.</p>
+          </div>
+        </section>
+        <h3>Аккаунты TikTok</h3>
+        <div id="automationAccountStatus" class="automation-account-status" role="status" aria-live="polite"></div>
+        <p id="automationContentSummary" class="helper"></p>
+        <dialog id="automationContentDialog" aria-labelledby="automationContentTitle">
+          <form id="automationContentForm">
+            <h2 id="automationContentTitle">Описание и хештеги · TikTok</h2>
+            <p class="helper">Сохраняются для следующих роликов режима 24/7. Уже созданные ролики и текущий монтаж не меняются.</p>
+            <label>Описание<textarea id="automationCaption" rows="4" maxlength="1200" placeholder="Описание для следующих роликов"></textarea></label>
+            <label>Хештеги<input id="automationHashtags" maxlength="350" placeholder="#video #shorts"></label>
+            <p id="automationContentError" class="error-text" role="alert"></p>
+            <div class="automation-actions">
+              <button id="automationContentSave" class="button primary" type="submit">Сохранить</button>
+              <button id="automationContentCancel" class="button secondary" type="button">Отмена</button>
+            </div>
+          </form>
+        </dialog>
+        <p id="automationDetail" class="helper" role="status"></p>
+        <p class="helper">Остановка отменяет ожидающие задачи плана. Уже начатая публикация может завершиться; повторно файл не отправляется.</p>
+      </section>
+      <section class="panel wide automation-panel">
+        <div class="panel-heading">
+          <div><span class="eyebrow">Автоматический конвейер</span><h1>Найти, нарезать и загрузить на YouTube</h1></div>
+          <span class="helper">За один запуск загружается один выбранный клип</span>
+        </div>
+        <form id="discoveryForm" class="discovery-grid">
+          <p class="helper query-field">Поиск: <strong>Есть разрешение автора</strong>. Режим действует постоянно для всех поисковых запусков.</p>
+          <label class="query-field">Что искать<input id="discoveryQuery" placeholder="Например: домашняя выпечка" maxlength="180" required></label>
+          <label>Исходников<input id="discoveryAmount" type="number" min="1" max="1" value="1" readonly></label>
+          <label>Клипов с каждого<input id="discoveryClipCount" type="number" min="1" max="1" value="1" readonly></label>
+          <label>Длина, сек.<input id="discoveryClipDuration" type="number" min="5" max="180" value="20"></label>
+          <label class="caption-field">Описание<input id="discoveryCaption" maxlength="1200" placeholder="Описание для готовых клипов"></label>
+          <label class="tags-field">Хэштеги<input id="discoveryHashtags" maxlength="350" value="" placeholder="#video #shorts"></label>
+          <label>Длина исходника<select id="discoveryDurationFilter"><option value="any">Любая</option><option value="long">От 20 минут</option><option value="medium">4–20 минут</option><option value="short">До 4 минут</option></select></label>
+          <label>YouTube-аккаунт<select id="pipelineAccount"><option value="">Импортируйте аккаунт</option></select></label>
+          <label>Видимость<select id="pipelineVisibility"><option value="private">Только я</option><option value="unlisted">По ссылке</option><option value="public">Публично</option></select></label>
+          <label class="check pipeline-consent"><input id="pipelinePublish" type="checkbox" checked><span>После монтажа загрузить следующий готовый клип по запросу в указанный канал (не для детей)</span></label>
+          {% if youtube_configured %}
+          <button id="startPipelineButton" class="button primary" type="submit">Запустить полный цикл</button>
+          {% else %}
+          <button id="startPipelineButton" class="button primary" type="submit" disabled>Добавьте YOUTUBE_API_KEY</button>
+          {% endif %}
+        </form>
+      </section>
+
+      <section class="panel input-panel">
+        <div class="panel-heading">
+          <div><span class="eyebrow">01 · Источники</span><h1>Добавить видео</h1></div>
+          <span class="helper">До 20 ссылок за раз</span>
+        </div>
+        <form id="sourceForm">
+          <label for="urls">Ссылки YouTube</label>
+          <textarea id="urls" rows="7" placeholder="https://www.youtube.com/watch?v=...&#10;https://youtu.be/..." required></textarea>
+          <label class="check"><input id="rights" type="checkbox" required><span>Подтверждаю право скачивать, редактировать и публиковать эти материалы</span></label>
+          <button class="button primary" type="submit">Добавить в очередь</button>
+        </form>
+        <div class="divider"><span>или загрузить исходник</span></div>
+        <form id="uploadForm" class="upload-row">
+          <input id="localFile" type="file" accept="video/mp4,video/quicktime,video/webm,.mkv" required>
+          <label class="check compact"><input id="uploadRights" type="checkbox" required><span>Права подтверждены</span></label>
+          <button class="button secondary" type="submit">Загрузить</button>
+        </form>
+      </section>
+
+      <section class="panel">
+        <div class="panel-heading">
+          <div><span class="eyebrow">02 · Монтаж</span><h2>Нарезать источник</h2></div>
+        </div>
+        <form id="renderForm" class="grid-form">
+          <label>Источник<select id="renderSource" required><option value="">Нет готовых источников</option></select></label>
+          <div class="two-cols">
+            <label>Количество<input id="clipAmount" type="number" min="1" max="1" value="1" readonly></label>
+            <label>Длина, сек.<input id="clipDuration" type="number" min="5" max="180" value="20"></label>
+          </div>
+          <label>Описание<textarea id="caption" rows="3" maxlength="1800" placeholder="Короткое описание ролика"></textarea></label>
+          <label>Хэштеги<input id="hashtags" maxlength="350" placeholder="#gameplay #shortvideo"></label>
+          <button class="button primary" type="submit">Создать вертикальные клипы</button>
+        </form>
+      </section>
+
+      <!-- НОВЫЙ БЛОК: Изолированная панель для выгрузки в YouTube с отдельными ID -->
+      <section id="youtubeUploadPanel" class="panel wide">
+        <div class="panel-heading">
+          <div><span class="eyebrow">Экстра</span><h2>Загрузить Shorts через сайт YouTube</h2></div>
+          <span class="helper">До 180 секунд; горизонтальный файл автоматически оформится в 9:16. Сессия — из импортированного JSON.</span>
+        </div>
+        <form id="ytDirectForm" class="publish-grid">
+          <label style="grid-column: 1 / -1;">YouTube-аккаунт
+            <select id="ytAccountSelect" required><option value="">Сначала импортируйте JSON аккаунтов</option></select>
+          </label>
+          <button id="ytCheckSession" class="button secondary" type="button">Проверить вход в канал</button>
+          <label style="grid-column: 1 / -1;">Готовый клип из монтажа
+            <select id="ytClipSelect"><option value="">Или выберите файл ниже</option></select>
+          </label>
+          <label style="grid-column: 1 / -1;">Видеофайл для YouTube
+            <input type="file" id="ytFileInput" accept="video/mp4,video/quicktime,video/webm,.mkv">
+          </label>
+          <label>Название<input id="ytTitle" maxlength="100" placeholder="Название видео"></label>
+          <label>Видимость<select id="ytVisibility"><option value="private">Только я</option><option value="unlisted">По ссылке</option><option value="public">Публично</option></select></label>
+          <label>Аудитория<select id="ytMadeForKids"><option value="false">Не для детей</option><option value="true">Для детей</option></select></label>
+          <label class="check" style="grid-column: 1 / -1;"><input id="ytConsent" type="checkbox" required><span>Подтверждаю загрузку в выбранный канал и право публиковать этот ролик</span></label>
+          <button class="button primary" type="submit" style="grid-column: 1 / -1;">Загрузить Shorts через сайт YouTube</button>
+          <span id="ytDirectStatus" class="helper" role="status" aria-live="polite" style="grid-column: 1 / -1; margin-top: 5px;"></span>
+        </form>
+      </section>
+
+      <section class="panel wide">
+        <div class="panel-heading">
+          <div><span class="eyebrow">Журнал</span><h2>Очередь обработки</h2></div>
+          <button id="refreshButton" class="text-button" type="button">Обновить</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Задача</th><th>Аккаунт</th><th>Статус</th><th>Попытки</th><th>Результат</th><th></th></tr></thead>
+            <tbody id="jobRows"><tr><td colspan="6" class="empty">Очередь пуста</td></tr></tbody>
+          </table>
+        </div>
+      </section>
+      <section class="panel wide" id="fiveAccountMetrics">
+        <div class="panel-heading"><div><span class="eyebrow">Аккаунты партии</span><h2>Название аккаунта и прогресс</h2></div></div>
+        <p class="helper">Ссылки профилей появятся после подтверждённых публикаций. Метки TXT20 соответствуют строкам загруженного файла.</p>
+        <div class="table-wrap"><table><thead><tr><th>№</th><th>Название аккаунта</th><th>Видео этой партии</th><th>Вход</th></tr></thead><tbody id="fiveAccountRows"></tbody></table></div>
+      </section>
+    </div>
+  </main>
+
+  <dialog id="ttCookieDialog" aria-labelledby="ttCookieTitle">
+    <form id="ttCookieForm">
+      <h2 id="ttCookieTitle">Вставить cookie TikTok</h2>
+      <p class="cookie-paste-hint">Подойдут JSON из расширения, строка Cookie или экспорт Netscape. Файл создавать не нужно.</p>
+      <label>Куда сохранить<select id="ttCookieAccount"><option value="">Добавить новый аккаунт</option></select></label>
+      <p class="cookie-paste-hint">Для обновления входа выберите свой существующий аккаунт — история и очередь сохранятся.</p>
+      <label>Название аккаунта (необязательно)<input id="ttCookieName" maxlength="255" autocomplete="off" placeholder="Например, @мой_аккаунт"></label>
+      <label>Cookie<textarea id="ttCookieText" rows="8" maxlength="2097152" required autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Вставьте сюда скопированные cookie TikTok"></textarea></label>
+      <label class="check"><input id="ttCookieOwns" type="checkbox" required><span>Это мой TikTok-аккаунт</span></label>
+      <p id="ttCookieError" class="error-text" role="alert"></p>
+      <div class="automation-actions">
+        <button id="ttCookieSave" class="button primary" type="submit">Создать JSON и сохранить</button>
+        <button id="ttCookieCancel" class="button secondary" type="button">Отмена</button>
+      </div>
+    </form>
+  </dialog>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script src="/static/app.js?v=20261027-45"></script>
+  <script src="/static/editing.js?v=20261027-45"></script>
+  <script src="/static/views.js?v=20261027-45"></script>
+  <script src="/static/account-login.js?v=20261016-1"></script>
+  <script src="/static/automation-accounts.js?v=20261017-1"></script>
+  <script src="/static/five-videos.js?v=20261027-45"></script>
+</body>
+</html>
+
