@@ -1,0 +1,2 @@
+"""ClipForge application package."""
+
